@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users</title>
+    <style>
+        body {
+            background-color: #ffffff;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+
+        .container {
+            background-color: #e7e7e7;
+            border-radius: 8px;
+            padding: 40px;
+            width: 400px;
+            position: relative;
+        }
+
+        .admin-form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: rgb(50, 50, 50);
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            padding: 10px;
+            margin-bottom: 20px;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button[type="submit"] {
+            background-color: #000000;
+            color: #ffffff;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #353535;
+        }
+
+        .backtologin {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .backtologin a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .backtologin a:hover {
+            text-decoration: underline;
+        }
+
+        .logo {
+            width: 100px;
+            height: auto;
+            margin: 0 auto;
+            display: block;
+            margin-bottom: 20px;
+        }
+    </style>
+    <script>
+        window.onload = function() {
+            const messages = {{ get_flashed_messages(with_categories=True) | tojson }};
+            messages.forEach(([category, message]) => {
+                if (category === 'success') {
+                    alert(message);
+                } else if (category === 'error') {
+                    alert(message);
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <img src="/static/manageusers.png" alt="Admin Logo" class="logo">
+        <h1>Manage Users</h1>
+        <hr></hr>
+        <form method="post" action="/add_user">
+            <h3 style="color:rgb(0, 0, 0);">Add User</h3> 
+            <input type="text" placeholder="New Username" name="new_username" required>
+            <input type="password" placeholder="New Password" name="new_password" required>
+            <button type="submit">Add User</button>
+        <hr></hr>
+        </form>
+        <form method="post" action="/delete_user">
+            <h3 style="color:rgb(0, 0, 0);">Delete User</h3>
+            <input type="text" placeholder="Username to Delete" name="delete_username" required>
+            <button type="submit">Delete User</button>
+            <hr></hr>
+        </form>
+            <div class="backtologin">
+                <a href="http://127.0.0.1:5000/">Back to Login</a>
+            </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Creation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #efeded;
+            position: relative;
+        }
+        .header .logo-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header .main-logo {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .header .main-logo h1 {
+            margin: 0;
+            font-size: 35px;
+        }
+        .header .main-logo p {
+            margin: 0;
+            font-size: 25px;
+            font-weight: bold;
+        }
+        .header .logo-right {
+            order: 3;
+        }
+        .header .logo {
+            height: 50px;
+        }
+        .main-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 8px auto;
+            max-width: 700px;
+        }
+        .image-container {
+            position: relative;
+            border: 1px solid #000;
+            margin: 10px;
+        }
+        #imageCanvas {
+            border: 0px ;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .button-container button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+        .status {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .text-box-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            width: 100%;
+        }
+        .text-box-container input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-left">
+            <img src="/static/plantconnect.png" alt="Plant Connect Logo" class="logo">
+        </div>
+        <div class="main-logo">
+            <h1>Vision System</h1>
+            <p>Master Creation</p>
+        </div>
+        <div class="logo-right">
+            <img src="/static/lg.png" alt="LG Logo" class="logo">
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="image-container">
+            <canvas id="imageCanvas"></canvas>
+        </div>
+        <div class="text-box-container">
+            <input type="text" id="textBox" placeholder="Enter Part Number" maxlength="11">
+            <input type="text" id="masterName" placeholder="Enter Master Creator's Name">
+        </div>
+        <script>
+            // Function to enforce uppercase letters and numbers only
+            document.getElementById('textBox').addEventListener('input', function() {
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            });
+        </script>
+        <div class="button-container">
+            <button onclick="captureImage()">Capture Image</button>
+            <button onclick="resetCanvas()">Reset</button>
+            <button onclick="undoRectangle()">Undo</button>
+            <button onclick="saveRectangles()">Save</button>
+            <button onclick="goHome()">Home</button>
+        </div>
+        <div class="status">
+            <span id="status-indicator"></span>     
+        </div>
+    </div>
+
+    <script>
+        let rectangles = [];
+        let isDrawing = false;
+        let startX, startY;
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const image = new Image();
+
+        function captureImage() {
+            fetch('/capture', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    image.src = data.image_path;
+                    image.onload = () => {
+                        canvas.width = image.width;
+                        canvas.height = image.height;
+                        ctx.drawImage(image, 0, 0);
+                    };
+                } else {
+                    alert('Error capturing image: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            startX = e.offsetX;
+            startY = e.offsetY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                ctx.drawImage(image, 0, 0);
+                drawRectangles();
+                ctx.strokeStyle = 'green';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(startX, startY, e.offsetX - startX, e.offsetY - startY);
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (isDrawing) {
+                isDrawing = false;
+                const rect = { x: startX, y: startY, width: e.offsetX - startX, height: e.offsetY - startY };
+                rectangles.push(rect);
+                drawRectangles();
+            }
+        });
+
+        function drawRectangles() {
+            rectangles.forEach(rect => {
+                ctx.strokeStyle = 'green';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+            });
+        }
+
+        function goHome() {
+            window.location.href = "http://127.0.0.1:5000/inspection";
+        }
+
+        function resetCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            rectangles = [];
+        }
+
+        function undoRectangle() {
+            rectangles.pop();
+            ctx.drawImage(image, 0, 0);
+            drawRectangles();
+        }
+
+        function saveRectangles() {
+            if (rectangles.length === 0) {
+                alert('No rectangles to save.');
+                return;
+            }
+
+            const folderName = document.getElementById('textBox').value.trim();
+            if (!folderName) {
+                alert('Please enter a folder name.');
+                return;
+            }
+
+            const masterName = document.getElementById('masterName').value.trim();
+            if (!masterName) {
+                alert('Please enter the master creator\'s name.');
+                return;
+            }
+
+            const data = rectangles.map(rect => ({
+                x: rect.x,
+                y: rect.y,
+                width: rect.width,
+                height: rect.height
+            }));
+
+            // Get current date and time
+            const now = new Date();
+            const dateTimeString = now.toISOString();
+
+            // Send data, folder name, master name, and date-time to the server
+            fetch('/save_rectangles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    folderName,
+                    masterName,
+                    dateTimeString,
+                    data
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    document.getElementById('status-indicator').innerText = `Files saved in ${folderName}`;
+                } else {
+                    alert(result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

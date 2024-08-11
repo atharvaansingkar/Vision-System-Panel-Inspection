@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: #efeded;
+            position: relative;
+        }
+        .header .logo-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .header .main-logo {
+            text-align: center;
+            flex-grow: 1;
+        }
+        .header .main-logo h1 {
+            margin: 0;
+            font-size: 35px;
+        }
+        .header .main-logo p {
+            margin: 0;
+            font-size: 25px;
+            font-weight: bold;
+        }
+        .header .logo-right {
+            order: 3;
+        }
+        .header .logo {
+            height: 50px;
+        }
+        .header .admin-logo {
+            height: 50px;
+            position: absolute;
+            right: 10px;
+            top: 100px;
+        }
+        .header .refresh-logo {
+            height: 50px;
+            cursor: pointer;
+            position: absolute;
+            top: 100px;
+            left: 10px;
+            transition: transform 0.2s;
+        }
+        .refresh-logo.rotate {
+            animation: rotate 0.2s;
+        }
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .user-info {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 16px;
+        }
+
+        .user-info span {
+            font-weight: bold;
+        }
+
+        .user-info a {
+            margin-left: 10px;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        .main-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 8px auto;
+            max-width: 700px;
+        }
+        .main-content label {
+            font-size: 1.2em;
+            margin-bottom: 1px;
+        }
+        .dropdown-container {
+            margin-right: 20px;
+        }
+        .language-input {
+            padding: 8px;
+            font-size: 1em;
+            width: 130px;
+        }
+        .custom-alert {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            background-color: red;
+            color: white;
+            border: 1px solid darkred;
+            border-radius: 5px;
+            z-index: 1000;
+            text-align: center;
+            display: none;
+        }
+        .custom-alert button {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: white;
+            color: red;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .image-container {
+            width: 70%;
+            height: 0;
+            padding-bottom: 25%;
+            position: relative;
+            border: 1px solid #000;
+            margin: 10px;
+            overflow: hidden;
+        }
+        .image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .image-label {
+            width: 70%;
+            text-align: left;
+            font-weight: bold;
+        }
+        .buttons-container {
+            display: flex;
+            justify-content: space-between;
+            width: 25%;
+            padding: 10px;
+        }
+        .capture-btn, .inspect-btn {
+            background-color: rgb(0, 0, 0);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .capture-btn:hover {
+            background-color: rgb(50, 50, 50);
+            transform: scale(1.05);
+        }
+        .inspect-btn {
+            background-color: yellow;
+            color: black;
+        }
+        .inspect-btn:hover {
+            background-color: rgb(255, 230, 0);
+            transform: scale(1.05);
+        }
+        .status {
+            text-align: center;
+            margin-top: 2px;
+        }
+        .status-indicator {
+            display: inline-block;
+            padding: 0px 0px;
+            margin: 0 0px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        .ok {
+            background-color: green;
+            color: white;
+            font-size: 1.5em;
+            padding: 5px 10px;
+        }
+        .ng {
+            background-color: red;
+            color: white;
+            font-size: 1.5em;
+            padding: 5px 10px;
+        }
+        .inspection-table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        .inspection-table th, .inspection-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+        }
+        .inspection-table th {
+            background-color: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="javascript:void(0);" onclick="refreshPage()">
+            <img src="/static/refresh.png" alt="Refresh Logo" class="refresh-logo" id="refresh-logo">
+        </a>
+        <div class="logo-left">
+            <img src="/static/plantconnect.png" alt="Plant Connect Logo" class="logo">
+        </div>
+        <div class="main-logo">
+            <h1>Vision System</h1>
+            <p>Panel Assembly, Control</p>
+        </div>
+        <div class="logo-right">
+            <img src="/static/lg.png" alt="LG Logo" class="logo">
+        </div>
+    <a href="Masterlogin">
+        <img src="/static/admin.png" alt="Admin Login Logo" class="admin-logo">
+    </a>
+    <div class="user-info">
+        Logged in as: <span>{{ username }}</span>
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+    </div>
+    <div class="main-content">
+        <div class="inputbox-container">
+            <label for="language-input">Part Number:</label>
+            <input type="text" id="language-input" class="language-input" placeholder="Enter model name" maxlength="11">
+        </div>
+        <div id="custom-alert" class="custom-alert">
+            <p id="alert-message">Reference image not found for this part number.</p>
+            <button onclick="closeCustomAlert()">OK</button>
+          </div>
+        <script>
+            // Function to enforce uppercase letters and numbers only
+            document.getElementById('language-input').addEventListener('input', function() {
+                this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            });
+        </script>
+    </div>
+
+    <div class="main-content">
+        <div class="image-label">Master Image</div>
+    </div>
+    <div class="main-content">
+        <div class="image-container">
+            <img id="reference-image" src="" alt="Reference Image">
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="model-text">
+            Part Number: <span id="selected-model">None</span>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="image-label">Inspection Part</div>
+    </div>
+    <div class="main-content">
+        <div class="image-container">
+            <img id="master-image" src="" alt="Sample Image">
+        </div>
+    </div>
+    <div class="main-content buttons-container">
+        <button class="capture-btn" onclick="captureImage()">Capture Image</button>
+        <button class="inspect-btn" onclick="inspect()">Inspect</button>
+    </div>
+    <div class="status">
+        <span>Status:</span> <span id="status-indicator" class="status-indicator"></span>
+    </div>
+    <div class="status">
+        <span id="status-indicator" class="status-indicator"></span>
+    </div>
+    <div class="main-content">
+        <table class="inspection-table">
+            <thead>
+                <tr>
+                    <th>SN</th>
+                    <th>DATE</th>
+                    <th>TIME</th>
+                    <th>Username</th>
+                    <th>Part Number</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody id="inspection-table-body">
+                <!-- Dynamic rows will be added here -->
+            </tbody>
+        </table>
+    </div>
+    <script>
+      let inspectionCounter = 0;
+let inspectionRecords = {};
+
+// Function to capture image from camera using neoapi
+function captureImage() {
+    fetch('/capture', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Display captured image in the sample image box
+            const masterImage = document.getElementById('master-image');
+            masterImage.src = data.image_path;  // Update with the new image path
+            masterImage.style.display = 'block';
+        } else {
+            alert('Failed to capture image. Please try again.');
+        }
+    })
+    .catch(error => {
+        console.error('Error capturing image:', error);
+        alert('Error capturing image. Please check camera connection and try again.');
+    });
+}
+
+// Function to inspect image based on selected model
+function inspect() {
+    const selectedLanguage = document.getElementById('language-input').value;
+
+    if (!selectedLanguage.match(/^[A-Z0-9]{11}$/)) {
+        alert('Please enter a valid 11-character alphanumeric part number in uppercase letters and numbers only.');
+        return;
+    }
+
+    const masterImage = document.getElementById('master-image');
+    if (!masterImage.src) {
+        alert('Please capture an image first.');
+        return;
+    }
+
+    // Clear the current image from the container before displaying the result image
+    masterImage.src = '';
+
+    fetch(masterImage.src)
+        .then(res => res.blob())
+        .then(blob => {
+            const formData = new FormData();
+            formData.append('sampleImage', blob, 'captured_image.bmp');
+            formData.append('language', selectedLanguage);
+
+            fetch('/process', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(response => {
+                const status = response.status;
+                const inspectionReport = response.inspection_report;
+                const statusIndicator = document.getElementById('status-indicator');
+                statusIndicator.innerText = `Status: ${status}`;
+                if (status === 'OK') {
+                    statusIndicator.innerText = 'OK';
+                    statusIndicator.className = 'status-indicator ok';
+                } else {
+                    statusIndicator.innerText = 'NG';
+                    statusIndicator.className = 'status-indicator ng';
+                }
+
+                updateInspectionTable(selectedLanguage, status);
+                console.log('Inspection Report:', inspectionReport);
+
+                // Display the updated result image
+                masterImage.src = '/static/result_image.bmp';  // Path to the updated result image
+            })
+            .catch(error => {
+                console.error('Error occurred while processing images:', error);
+                alert('Error occurred while processing images.');
+            });
+        });
+}
+
+// Function to update the inspection table
+function updateInspectionTable(partNumber, result) {
+    const now = new Date();
+    const date = now.toLocaleDateString();
+    const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    const username = '{{ username }}';
+    const newRecord = { date, time, username, partNumber, result };
+
+    fetch('/add_inspection_record', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newRecord),
+    })
+    .then(response => response.json())
+    .then(() => {
+        if (!inspectionRecords[partNumber]) {
+            inspectionRecords[partNumber] = [];
+        }
+        inspectionRecords[partNumber].push(newRecord);
+        renderTable();
+    });
+}
+
+// Function to render the inspection table
+function renderTable() {
+    const tbody = document.getElementById('inspection-table-body');
+    tbody.innerHTML = ''; 
+    let sn = 1; 
+
+    for (const partNumber in inspectionRecords) {
+        const records = inspectionRecords[partNumber];
+        records.forEach(record => {
+            const row = `
+                <tr>
+                    <td>${sn++}</td>
+                    <td>${record.date}</td>
+                    <td>${record.time}</td>
+                    <td>${record.username}</td>
+                    <td>${record.partNumber}</td>
+                    <td>${record.result}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+}
+
+// Function to load inspection data from the server
+function loadInspectionData() {
+    fetch('/get_inspection_data')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Data received from server:", data);  // Debugging line
+            inspectionRecords = data.reduce((acc, record) => {
+                const { partNumber, date, time, username, result } = record;
+                if (!acc[partNumber]) {
+                    acc[partNumber] = [];
+                }
+                acc[partNumber].push({ date, time, username, partNumber, result });
+                return acc;
+            }, {});
+            console.log("Processed inspectionRecords:", inspectionRecords);  // Debugging line
+            renderTable();
+        })
+        .catch(error => {
+            console.error('Error loading inspection data:', error);
+        });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadInspectionData();
+});
+
+// Function to refresh the page and rotate the refresh logo
+function refreshPage() {
+    const refreshLogo = document.getElementById('refresh-logo');
+    refreshLogo.classList.add('rotate');
+    
+    // Remove the class after animation ends to allow it to be reapplied
+    refreshLogo.addEventListener('animationend', () => {
+        refreshLogo.classList.remove('rotate');
+    });
+
+    // Reload the page
+    location.reload();
+}
+
+// Function to show the custom alert box
+function showCustomAlert(message) {
+  const alertBox = document.getElementById('custom-alert');
+  const alertMessage = document.getElementById('alert-message');
+  alertMessage.innerText = message;
+  alertBox.style.display = 'block';
+}
+
+// Function to close the custom alert box
+function closeCustomAlert() {
+  const alertBox = document.getElementById('custom-alert');
+  alertBox.style.display = 'none';
+}
+
+// Function to load reference image and update selected model text
+document.getElementById('language-input').addEventListener('input', function() {
+    const selectedLanguage = this.value.trim().toUpperCase();
+    
+    if (selectedLanguage.length === 11) {
+        const referenceImagePath = `static/language_models/${selectedLanguage}/reference_image.bmp`;
+
+        // Check if the image exists before setting the src
+        fetch(referenceImagePath, { method: 'HEAD' })
+            .then(res => {
+                if (res.ok) {
+                    document.getElementById('reference-image').src = referenceImagePath;
+                    document.getElementById('selected-model').innerText = selectedLanguage;
+                    closeCustomAlert(); // Hide the alert if the image is found
+                } else {
+                    showCustomAlert('Reference image not found for this part number.');
+                }
+            })
+            .catch(error => {
+        console.error('Error loading reference image:', error);
+        showCustomAlert('Error loading reference image. Please check the server logs.');
+      });
+  } else {
+    closeCustomAlert(); // Hide the alert if the input is not a valid part number
+  }
+});
+
+    </script>
+</body>
+</html>
