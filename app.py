@@ -1,27 +1,26 @@
 # Import necessary libraries
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 import cv2
 import numpy as np
 import requests
 from skimage.exposure import match_histograms
 import os
 import pandas as pd
-import datetime
+from datetime import datetime, timezone, timedelta
 from datetime import datetime
 import base64
 import openpyxl
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook  # Add load_workbook here
 from PIL import Image
 import logging
 import neoapi
 import gc
 import math
 
-#Initialize Flask app
+# Initialize Flask app
 app = Flask(__name__)
 app.secret_key = '12345678'
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'static')
-
 
 # Define the credentials
 USERNAME = 'admin'
@@ -39,7 +38,7 @@ def generate_inspection_report(language, status, image, username):
         current_date = datetime.now().strftime("%d-%m-%Y")
         
         # Define the base directory for saving the images
-        base_dir = os.path.join(r'C:\Program Files\Apache Software Foundation\Tomcat 9.0\webapps\sfactorystd\Panel_Inspection', current_date)
+        base_dir = os.path.join(r'C:\Program Files\Apache Software Foundation\Tomcat 9.0\webapps\sfactory\Panel_Inspection', current_date)
         
         # Create date folder if it doesn't exist
         if not os.path.exists(base_dir):
@@ -71,14 +70,14 @@ def generate_inspection_report(language, status, image, username):
         cv2.imwrite(static_image_path, image)
 
         # Extract the relative path to be sent in the API request
-        relative_path = os.path.relpath(image_path, r'C:\Program Files\Apache Software Foundation\Tomcat 9.0\webapps\sfactorystd')
+        relative_path = os.path.relpath(image_path, r'C:\Program Files\Apache Software Foundation\Tomcat 9.0\webapps\sfactory')
 
         # Create the report data
         report_data = {
         "FunctionName": "1007",
-        "Name": "aipl",
-        "Password": "aipl",
-        "UniqueID": 5,
+        "Name": "MT123",
+        "Password": "MT123",
+        "UniqueID": 1,
         "DateTime": str(timestamp_ms),
         "UniqueKey": language,  
         "Command": 3,
@@ -92,7 +91,7 @@ def generate_inspection_report(language, status, image, username):
     }
 
         # Send API data to the desired endpoint
-        response = requests.post('http://localhost:8080/sfactorystd/', json=report_data)
+        response = requests.post('http://localhost:8080/sfactory/', json=report_data)
         if response.status_code == 200:
             return response.text  # Return response if needed
         else:
@@ -102,7 +101,7 @@ def generate_inspection_report(language, status, image, username):
         logger.error("Error generating inspection report:", exc_info=True)
         return None
 
-# Load patch locations function
+# Function to load patch locations from an Excel file
 def load_patch_locations(language):
     try:
         base_path = os.path.join('static', 'language_models', language)
@@ -110,18 +109,21 @@ def load_patch_locations(language):
         
         if not os.path.exists(excel_file):
             logger.error(f"Location data file for language {language} does not exist.")
-            return []
+            return [], []
 
         wb = openpyxl.load_workbook(excel_file, data_only=True)
-        gray_sheet = wb[wb.sheetnames[0]]
-        gray_patch_locations = [row[0:4] for row in gray_sheet.iter_rows(min_row=2, values_only=True)]
-        
-        return gray_patch_locations
+        sheet1 = wb[wb.sheetnames[0]]
+        sheet2 = wb[wb.sheetnames[1]]
+
+        gray_patch_locations_1 = [row[0:4] for row in sheet1.iter_rows(min_row=2, values_only=True)]
+        gray_patch_locations_2 = [row[0:4] for row in sheet2.iter_rows(min_row=2, values_only=True)]
+
+        return gray_patch_locations_1, gray_patch_locations_2
     
     except Exception as e:
         logger.error(f"Error loading patch locations for language {language}: {e}", exc_info=True)
-        return []
-    
+        return [], []
+
 # Define the route for capturing image from the camera
 @app.route('/capture', methods=['POST'])
 def capture_image():
@@ -324,13 +326,14 @@ def process_image():
             return patch
 
         # Load patch locations based on the selected language
-        gray_patch_locations = load_patch_locations(language)
+        gray_patch_locations_1, gray_patch_locations_2 = load_patch_locations(language)
 
         # Initialize lists to store patch matching results
-        gray_patch_matches = []
+        gray_patch_matches_1 = []
+        gray_patch_matches_2 = []
 
-        # Iterate over each patch location and size for grayscale image processing
-        for i, (x, y, width, height) in enumerate(gray_patch_locations):
+        # Process patches from gray_patch_locations_1
+        for i, (x, y, width, height) in enumerate(gray_patch_locations_1):
             # Extract the patch from the original image
             master_patch = extract_patch(reference_image, x, y, width, height)
 
@@ -343,7 +346,6 @@ def process_image():
 
             # Perform template matching
             result = cv2.matchTemplate(test_patch, master_patch, cv2.TM_CCOEFF_NORMED)
-
             value = result[0][0]
 
             def ceil_jutsu(value, decimal_places):
@@ -357,10 +359,10 @@ def process_image():
             # Determine if the patches match
             if match_value >= threshold:
                 print(match_value)
-                gray_patch_matches.append(True)
+                gray_patch_matches_1.append(True)
             else:
                 print(match_value)
-                gray_patch_matches.append(False)
+                gray_patch_matches_1.append(False)
 
             # Delete patches to free up memory
             del master_patch, test_patch, result, match_value
@@ -368,8 +370,42 @@ def process_image():
             # Optionally, force garbage collection (though usually not necessary)
             gc.collect()
 
-        # Combine patch matching results from both color and grayscale processing
-        all_patch_matches = gray_patch_matches
+        # Process patches from gray_patch_locations_2
+        for i, (x, y, width, height) in enumerate(gray_patch_locations_2):
+            # Extract the patch from the original image
+            master_patch = extract_patch(reference_image, x, y, width, height)
+
+            # Extract the patch from the new input image
+            test_patch = extract_patch(matched, x, y, width, height)
+
+            # Ensure the patches are of the same type and convert if necessary
+            if master_patch.dtype != test_patch.dtype:
+                test_patch = test_patch.astype(master_patch.dtype)
+
+            # Perform template matching
+            result = cv2.matchTemplate(test_patch, master_patch, cv2.TM_CCOEFF_NORMED)
+            value = result[0][0]
+
+            match_value = ceil_jutsu(value, 2)
+
+            threshold = 0.69    
+
+            # Determine if the patches match
+            if match_value >= threshold:
+                print(match_value)
+                gray_patch_matches_2.append(True)
+            else:
+                print(match_value)
+                gray_patch_matches_2.append(False)
+
+            # Delete patches to free up memory
+            del master_patch, test_patch, result, match_value
+
+            # Optionally, force garbage collection (though usually not necessary)
+            gc.collect()
+
+        # Combine patch matching results from both sets
+        all_patch_matches = gray_patch_matches_1 + gray_patch_matches_2
 
         # Ensure the matched image is in a compatible format (uint8)
         matched_uint8 = cv2.normalize(matched, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
@@ -377,15 +413,21 @@ def process_image():
         # Convert the matched image to BGR (color) before drawing rectangles
         result_image = cv2.cvtColor(matched_uint8, cv2.COLOR_GRAY2BGR)
 
-        # Draw rectangles around unmatched patches
-        for i, (x, y, width, height) in enumerate(gray_patch_locations):
-            if all_patch_matches[i]:
+        # Draw rectangles around unmatched patches for gray_patch_locations_1
+        for i, (x, y, width, height) in enumerate(gray_patch_locations_1):
+            if gray_patch_matches_1[i]:
                 color = (0, 255, 0)  # Green for matched patches
             else:
                 color = (0, 0, 255)  # Red for unmatched patches
             cv2.rectangle(result_image, (x, y), (x + width, y + height), color, 2)
 
-        # cv2.imwrite("result_image.bmp", result_image)
+        # Draw rectangles around unmatched patches for gray_patch_locations_2
+        for i, (x, y, width, height) in enumerate(gray_patch_locations_2):
+            if gray_patch_matches_2[i]:
+                color = (0, 255, 0)  # Green for matched patches
+            else:
+                color = (0, 0, 255)  # Red for unmatched patches
+            cv2.rectangle(result_image, (x, y), (x + width, y + height), color, 2)
 
         # Display the overall matching status
         status = "OK" if all(all_patch_matches) else "NG"
@@ -405,14 +447,61 @@ def process_image():
         return jsonify({'status': 'Error', 'message': str(e)})
 
 
-@app.route('/save_rectangles', methods=['POST'])
-def save_rectangles():
+@app.route('/add_rectangle', methods=['POST'])
+def add_rectangle():
     try:
         request_data = request.get_json()
         folder_name = request_data['folderName']
-        data = request_data['data']
+        sheet_name = request_data['sheetName']
+        rect_data = request_data['data']
+        
+        folder_path = os.path.join('static', 'language_models', folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+        file_path = os.path.join(folder_path, 'location_data.xlsx')
+
+        if os.path.exists(file_path):
+            workbook = load_workbook(file_path)
+        else:
+            workbook = Workbook()
+            workbook.remove(workbook.active)  # Remove the default sheet
+            workbook.create_sheet('Sheet1')
+            workbook.create_sheet('Sheet2')
+
+        sheet = workbook[sheet_name]
+
+        if sheet.max_row == 1:
+            # If the sheet is empty, write the header
+            sheet.append(["x", "y", "width", "height"])
+
+        # Write rectangle data
+        sheet.append([rect_data['x'], rect_data['y'], rect_data['width'], rect_data['height']])
+
+        workbook.save(file_path)
+
+        return jsonify(success=True)
+    except Exception as e:
+        logger.error(f"Error adding rectangle: {e}", exc_info=True)
+        return jsonify(success=False, message=str(e))
+
+@app.route('/save_all', methods=['POST'])
+def save_all():
+    try:
+        request_data = request.get_json()
+        folder_name = request_data['folderName']
         master_name = request_data['masterName']
         date_time = request_data['dateTimeString']
+
+        # Parse the date-time string as UTC
+        parsed_date_time = datetime.fromisoformat(date_time[:-1]).replace(tzinfo=timezone.utc)
+        
+        # Convert UTC to local time by specifying the offset manually (example: +05:30 for IST)
+        local_offset = timedelta(hours=5, minutes=30)  # Replace with your local time offset
+        local_date_time = parsed_date_time + local_offset
+
+        # Format the date and time
+        formatted_date = local_date_time.strftime("%d-%m-%Y")
+        formatted_time = local_date_time.strftime("%I:%M %p")
         
         folder_path = os.path.join('static', 'language_models', folder_name)
         os.makedirs(folder_path, exist_ok=True)
@@ -426,29 +515,17 @@ def save_rectangles():
         else:
             return jsonify(success=False, message="Captured image not found.")
 
-        # Save the rectangles data in an Excel file
-        file_path = os.path.join(folder_path, 'location_data.xlsx')
-        workbook = Workbook()
-        sheet = workbook.active
-
-        # Write the header
-        sheet.append(["x", "y", "width", "height"])
-
-        # Write rectangle data
-        for rect in data:
-            sheet.append([rect['x'], rect['y'], rect['width'], rect['height']])
-
-        workbook.save(file_path)
-
-       # Save the master creator's name and date-time in a text file
+        # Save the master creator's name and date-time in a text file
         info_file_path = os.path.join(folder_path, 'info.txt')
-        with open(info_file_path, 'w') as f:
-            f.write(f"Master Creator: {master_name}\n")
-            f.write(f"Date and Time: {date_time}\n")
+        write_mode = 'a' if os.path.exists(info_file_path) else 'w'
+        with open(info_file_path, write_mode) as f:
+            f.write(f"\nMaster Creator: {master_name}\n")
+            f.write(f"Date: {formatted_date}\n")
+            f.write(f"Time: {formatted_time}\n")
         
         return jsonify(success=True)
     except Exception as e:
-        logger.error(f"Error saving rectangles: {e}", exc_info=True)
+        logger.error(f"Error saving all data: {e}", exc_info=True)
         return jsonify(success=False, message=str(e))
 
 # Directory for storing inspection tables

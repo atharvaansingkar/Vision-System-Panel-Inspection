@@ -87,6 +87,35 @@
             width: 100%;
             max-width: 400px;
         }
+        #popup {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0px 0px 10px 0px #000;
+            z-index: 1000;
+        }
+        #popup button {
+            margin: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+        #popup h3 {
+            margin-top: 0;
+        }
+        #overlay {
+            display: none;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
     </style>
 </head>
 <body>
@@ -120,12 +149,21 @@
             <button onclick="captureImage()">Capture Image</button>
             <button onclick="resetCanvas()">Reset</button>
             <button onclick="undoRectangle()">Undo</button>
-            <button onclick="saveRectangles()">Save</button>
+            <button onclick="showPopup()">Add</button> <!-- New Add button -->
+            <button onclick="saveData()">Save</button>
             <button onclick="goHome()">Home</button>
         </div>
         <div class="status">
             <span id="status-indicator"></span>     
         </div>
+    </div>
+
+    <div id="overlay"></div>
+    <div id="popup">
+        <h3>Select Sheet</h3>
+        <button onclick="saveRectangleToSheet('Sheet1')">Sheet 1</button>
+        <button onclick="saveRectangleToSheet('Sheet2')">Sheet 2</button>
+        <button onclick="closePopup()">Cancel</button>
     </div>
 
     <script>
@@ -206,37 +244,44 @@
             drawRectangles();
         }
 
-        function saveRectangles() {
+        // Function to show the popup
+        function showPopup() {
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('popup').style.display = 'block';
+        }
+
+        // Function to close the popup
+        function closePopup() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        // Function to save the current rectangle to the selected sheet
+        function saveRectangleToSheet(sheetName) {
             if (rectangles.length === 0) {
-                alert('No rectangles to save.');
+                alert('No rectangles to add.');
+                closePopup();
                 return;
             }
 
             const folderName = document.getElementById('textBox').value.trim();
             if (!folderName) {
                 alert('Please enter a folder name.');
+                closePopup();
                 return;
             }
 
             const masterName = document.getElementById('masterName').value.trim();
             if (!masterName) {
                 alert('Please enter the master creator\'s name.');
+                closePopup();
                 return;
             }
 
-            const data = rectangles.map(rect => ({
-                x: rect.x,
-                y: rect.y,
-                width: rect.width,
-                height: rect.height
-            }));
+            const rect = rectangles[rectangles.length - 1]; // Get the last drawn rectangle
 
-            // Get current date and time
-            const now = new Date();
-            const dateTimeString = now.toISOString();
-
-            // Send data, folder name, master name, and date-time to the server
-            fetch('/save_rectangles', {
+            // Send rectangle data to the server with the selected sheet
+            fetch('/add_rectangle', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -244,14 +289,50 @@
                 body: JSON.stringify({
                     folderName,
                     masterName,
-                    dateTimeString,
-                    data
+                    sheetName,
+                    data: rect
                 })
             })
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    document.getElementById('status-indicator').innerText = `Files saved in ${folderName}`;
+                    document.getElementById('status-indicator').innerText = `Rectangle added to ${sheetName}`;
+                } else {
+                    alert(result.message);
+                }
+                closePopup();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                closePopup();
+            });
+        }
+
+        // Function to save all data (Excel, image, and info.txt)
+        function saveData() {
+            const folderName = document.getElementById('textBox').value.trim();
+            const masterName = document.getElementById('masterName').value.trim();
+
+            // Get current date and time
+            const now = new Date();
+            const dateTimeString = now.toISOString();
+
+            // Send save request to the server
+            fetch('/save_all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    folderName,
+                    masterName,
+                    dateTimeString
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    document.getElementById('status-indicator').innerText = `Files saved successfully`;
                 } else {
                     alert(result.message);
                 }
