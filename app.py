@@ -16,6 +16,8 @@ import logging
 import neoapi
 import gc
 import math
+import serial
+import time
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -261,6 +263,10 @@ def master():
 @app.route('/process', methods=['POST'])
 def process_image():
     try:
+        # Initialize serial communication with Arduino
+        arduino = serial.Serial(port='COM8', baudrate=9600, timeout=1)
+        time.sleep(2)  # Give some time for the connection to establish
+
         # Get the logged-in username from the session
         username = session.get('username', 'Unknown')
 
@@ -431,6 +437,26 @@ def process_image():
 
         # Display the overall matching status
         status = "OK" if all(all_patch_matches) else "NG"
+
+        # Handle Arduino relay control based on status
+        if arduino.is_open:
+            try:
+                if status == "NG":
+                    arduino.write(b'1')  # Turn Relay 1 ON
+                    arduino.write(b'3')  # Turn Relay 2 ON
+                    time.sleep(5)
+                    arduino.write(b'0')  # Turn Relay 1 OFF
+                    arduino.write(b'2')  # Turn Relay 2 OFF
+                elif status == "OK":
+                    arduino.write(b'3')  # Turn Relay 2 ON
+                    time.sleep(5)
+                    arduino.write(b'2')  # Turn Relay 2 OFF
+            except serial.SerialException as e:
+                logger.error(f"Failed to communicate with Arduino: {e}")
+            finally:
+                arduino.close()  # Close the serial connection when done
+        else:
+            logger.error("Serial port is not open.")
 
         # Encode the processed image as base64
         _, buffer = cv2.imencode('.jpg', result_image)

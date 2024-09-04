@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision System</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f9fc;
+            color: #333;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1px 10px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .navbar .logo-left,
+        .navbar .logo-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar img {
+            height: 50px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .navbar img:hover {
+            opacity: 0.8;
+        }
+
+        .navbar .navbar-text {
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .navbar .navbar-text h1 {
+            margin: 0;
+            font-size: 1.8em;
+            color: #333;
+        }
+
+        .navbar .navbar-text p {
+            margin: 0;
+            font-size: 1.2em;
+            color: #555;
+        }
+
+        .secondary-navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 10px;
+            background-color: #e9ecef;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .secondary-navbar .refresh-logo {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .secondary-navbar .refresh-logo img {
+            height: 35px;
+        }
+
+        /* Rotation animation */
+        @keyframes rotate {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .secondary-navbar .refresh-logo img.rotating {
+            animation: rotate 0.1s ease-in-out;
+        }
+
+        .secondary-navbar .user-info {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .secondary-navbar .user-info .username {
+            margin-right: 10px;
+            font-size: 1em;
+            color: #333;
+        }
+
+        .secondary-navbar .user-info .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .secondary-navbar .user-info .dropdown button {
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            padding: 5px 10px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .secondary-navbar .user-info .dropdown button:hover {
+            background-color: #f1f1f1;
+        }
+
+        .secondary-navbar .user-info .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0; /* Aligns the dropdown content to the right of the button */
+            background-color: #ffffff;
+            min-width: 160px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            overflow: hidden; /* Prevents content overflow */
+        }
+
+        .secondary-navbar .user-info .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            white-space: nowrap; /* Ensures text doesn't wrap to the next line */
+        }
+
+        .secondary-navbar .user-info .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+
+        .secondary-navbar .user-info .dropdown:hover .dropdown-content {
+            display: block;
+            right: 0; /* Aligns the dropdown to the right side */
+            left: auto; /* Prevents the dropdown from overflowing to the left */
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo-left">
+            <img src="/static/plantconnect.png" alt="Left Logo">
+        </div>
+        <div class="navbar-text">
+            <h1>Vision System</h1>
+            <p>Panel Assembly, Control</p>
+        </div>
+        <div class="logo-right">
+            <img src="/static/lg.png" alt="Right Logo">
+        </div>
+    </div>
+
+    <div class="secondary-navbar">
+        <div class="refresh-logo">
+            <img src="/static/refresh.png" alt="Refresh">
+        </div>
+        <div class="user-info">
+            <span class="username">Logged in as: User123</span>
+            <div class="dropdown">
+                <button>▼</button>
+                <div class="dropdown-content">
+                    <a href="#">Master Creation</a>
+                    <a href="#">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('.secondary-navbar .refresh-logo img').addEventListener('click', function() {
+            const logo = this;
+            logo.classList.add('rotating');
+            
+            // Refresh the page after the animation ends
+            setTimeout(() => {
+                logo.classList.remove('rotating');
+                location.reload(); // This will refresh the page
+            }, 700);
+        });
+    </script>
+</body>
+</html>
