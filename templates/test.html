@@ -147,6 +147,7 @@
             right: 0; /* Aligns the dropdown to the right side */
             left: auto; /* Prevents the dropdown from overflowing to the left */
         }
+        
     </style>
 </head>
 <body>
@@ -179,17 +180,31 @@
         </div>
     </div>
 
+    
+
+    
+
     <script>
         document.querySelector('.secondary-navbar .refresh-logo img').addEventListener('click', function() {
             const logo = this;
             logo.classList.add('rotating');
-            
+
             // Refresh the page after the animation ends
             setTimeout(() => {
                 logo.classList.remove('rotating');
                 location.reload(); // This will refresh the page
             }, 700);
         });
+
+        // Enforce uppercase letters and numbers only in the input field
+        document.getElementById('language-input').addEventListener('input', function() {
+            this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        });
+
+        // Close custom alert function
+        function closeCustomAlert() {
+            document.getElementById('custom-alert').style.display = 'none';
+        }
     </script>
 </body>
 </html>

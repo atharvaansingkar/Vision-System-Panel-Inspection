@@ -6,50 +6,147 @@
     <title>Master Creation</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #ffffff;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background-color: #efeded;
-            position: relative;
-        }
-        .header .logo-left {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .header .main-logo {
-            text-align: center;
-            flex-grow: 1;
-        }
-        .header .main-logo h1 {
-            margin: 0;
-            font-size: 35px;
-        }
-        .header .main-logo p {
-            margin: 0;
-            font-size: 25px;
-            font-weight: bold;
-        }
-        .header .logo-right {
-            order: 3;
-        }
-        .header .logo {
-            height: 50px;
-        }
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f7f9fc;
+                color: #333;
+            }
+
+            .navbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 1px 10px;
+                background-color: #ffffff;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                position: relative;
+                z-index: 1000;
+            }
+
+            .navbar .logo-left,
+            .navbar .logo-right {
+                display: flex;
+                align-items: center;
+            }
+
+            .navbar img {
+                height: 50px;
+                cursor: pointer;
+                transition: opacity 0.3s;
+            }
+
+            .navbar img:hover {
+                opacity: 0.8;
+            }
+
+            .navbar .navbar-text {
+                text-align: center;
+                flex-grow: 1;
+            }
+
+            .navbar .navbar-text h1 {
+                margin: 0;
+                font-size: 1.8em;
+                color: #333;
+            }
+
+            .navbar .navbar-text p {
+                margin: 0;
+                font-size: 1.2em;
+                color: #555;
+            }
+
+            .secondary-navbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 10px;
+                background-color: #f2eeee;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            .secondary-navbar .refresh-logo {
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+            }
+
+            .secondary-navbar .refresh-logo img {
+    height: 30px;
+    transition: transform 0.3s;
+}
+
+.secondary-navbar .refresh-logo img:hover {
+    transform: rotate(90deg);
+}
+            .secondary-navbar .refresh-logo img.rotating {
+                animation: rotate 0.1s ease-in-out;
+            }
+            .secondary-navbar .user-info {
+                display: flex;
+                align-items: center;
+                position: relative;
+            }
+
+            .secondary-navbar .user-info .username {
+                margin-right: 10px;
+                font-size: 1em;
+                color: #333;
+            }
+
+            .secondary-navbar .user-info .dropdown {
+                position: relative;
+                display: inline-block;
+            }
+
+            .secondary-navbar .user-info .dropdown button {
+                background-color: #ffffff;
+                border: 1px solid #ccc;
+                padding: 5px 10px;
+                font-size: 1em;
+                cursor: pointer;
+            }
+
+            .secondary-navbar .user-info .dropdown button:hover {
+                background-color: #f1f1f1;
+            }
+
+            .secondary-navbar .user-info .dropdown-content {
+                display: none;
+                position: absolute;
+                right: 0; /* Aligns the dropdown content to the right of the button */
+                background-color: #ffffff;
+                min-width: 160px;
+                box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+                z-index: 1;
+                overflow: hidden; /* Prevents content overflow */
+            }
+
+            .secondary-navbar .user-info .dropdown-content a {
+                color: #333;
+                padding: 12px 16px;
+                text-decoration: none;
+                display: block;
+                white-space: nowrap; /* Ensures text doesn't wrap to the next line */
+            }
+
+            .secondary-navbar .user-info .dropdown-content a:hover {
+                background-color: #f1f1f1;
+            }
+
+            .secondary-navbar .user-info .dropdown:hover .dropdown-content {
+                display: block;
+                right: 0; /* Aligns the dropdown to the right side */
+                left: auto; /* Prevents the dropdown from overflowing to the left */
+            }
         .main-content {
             display: flex;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
-            margin: 8px auto;
-            max-width: 700px;
+            margin: 5px auto;
+            max-width: 1000px;
         }
         .image-container {
             position: relative;
@@ -119,18 +216,46 @@
     </style>
 </head>
 <body>
-    <div class="header">
+    <div class="navbar">
         <div class="logo-left">
-            <img src="/static/plantconnect.png" alt="Plant Connect Logo" class="logo">
+            <img src="/static/plantconnect.png" alt="Left Logo">
         </div>
-        <div class="main-logo">
+        <div class="navbar-text">
             <h1>Vision System</h1>
             <p>Master Creation</p>
         </div>
         <div class="logo-right">
-            <img src="/static/lg.png" alt="LG Logo" class="logo">
+            <img src="/static/lg.png" alt="Right Logo">
         </div>
     </div>
+
+   <div class="secondary-navbar">
+    <div class="refresh-logo">
+        <img src="/static/refresh.png" alt="Refresh">
+    </div>
+
+    <div class="user-info">
+        <div class="dropdown">
+            <button>▼</button>
+            <div class="dropdown-content">
+                <a href="http://127.0.0.1:5000/">Log Out</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    // Rotate the refresh logo and reload the page
+    document.querySelector('.secondary-navbar .refresh-logo img').addEventListener('click', function() {
+        const logo = this;
+        logo.classList.add('rotating');
+        setTimeout(() => {
+            logo.classList.remove('rotating');
+            location.reload(); // This will refresh the page
+        }, 100);
+    });
+</script>
     <div class="main-content">
         <div class="image-container">
             <canvas id="imageCanvas"></canvas>
