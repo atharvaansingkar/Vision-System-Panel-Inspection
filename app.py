@@ -10,14 +10,14 @@ from datetime import datetime, timezone, timedelta
 from datetime import datetime
 import base64
 import openpyxl
-from openpyxl import Workbook, load_workbook  # Add load_workbook here
+from openpyxl import Workbook, load_workbook 
 from PIL import Image
 import logging
 import neoapi
 import gc
 import math
-import serial
-import time
+# import serial
+# import time
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -263,8 +263,8 @@ def master():
 @app.route('/process', methods=['POST'])
 def process_image():
     try:
-        # # Initialize serial communication with Arduino
-        # arduino = serial.Serial(port='COM8', baudrate=9600, timeout=1)
+        # # # Initialize serial communication with Arduino
+        # arduino = serial.Serial(port='COM7', baudrate=9600, timeout=1)
         # time.sleep(2)  # Give some time for the connection to establish
 
         # Get the logged-in username from the session

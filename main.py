@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 # Function to generate JSON inspection report and handle folder creation
-def generate_inspection_report(language, status, image, username):
+def generate_inspection_report(part_number, status, image, username):
     try:
         # Create inspection report data
         timestamp_ms = int(datetime.now().timestamp() * 1000)
@@ -49,7 +49,7 @@ def generate_inspection_report(language, status, image, username):
             os.makedirs(base_dir)
         
         # Create model name directory inside date folder
-        model_dir = os.path.join(base_dir, language)
+        model_dir = os.path.join(base_dir, part_number)
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
         
@@ -63,7 +63,7 @@ def generate_inspection_report(language, status, image, username):
 
         # Save the processed image to the appropriate folder based on status
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        result_filename = f"{language}_{timestamp}.jpg"
+        result_filename = f"{part_number}_{timestamp}.jpg"
         status_folder = 'OK' if status == 'OK' else 'NG'
         image_path = os.path.join(model_dir, status_folder, result_filename)
         cv2.imwrite(image_path, image)
@@ -83,7 +83,7 @@ def generate_inspection_report(language, status, image, username):
         "Password": "MT123",
         "UniqueID": 1,
         "DateTime": str(timestamp_ms),
-        "UniqueKey": language,  
+        "UniqueKey": part_number,  
         "Command": 3,
         "CommandData": {
             "CommandHeader": [
@@ -106,26 +106,26 @@ def generate_inspection_report(language, status, image, username):
         return None
 
 # Function to load patch locations from an Excel file
-def load_patch_locations(language):
+def load_patch_locations(part_number):
     try:
-        base_path = os.path.join('static', 'language_models', language)
+        base_path = os.path.join('static', 'panel_folder', part_number)
         excel_file = os.path.join(base_path, 'location_data.xlsx')
         
         if not os.path.exists(excel_file):
-            logger.error(f"Location data file for language {language} does not exist.")
+            logger.error(f"Location data file for part_number {part_number} does not exist.")
             return [], []
 
         wb = openpyxl.load_workbook(excel_file, data_only=True)
         sheet1 = wb[wb.sheetnames[0]]
         sheet2 = wb[wb.sheetnames[1]]
 
-        gray_patch_locations_1 = [row[0:4] for row in sheet1.iter_rows(min_row=2, values_only=True)]
-        gray_patch_locations_2 = [row[0:4] for row in sheet2.iter_rows(min_row=2, values_only=True)]
+        text_patch_locations_1 = [row[0:4] for row in sheet1.iter_rows(min_row=2, values_only=True)]
+        blackpanel_patch_locations_2 = [row[0:4] for row in sheet2.iter_rows(min_row=2, values_only=True)]
 
-        return gray_patch_locations_1, gray_patch_locations_2
+        return text_patch_locations_1, blackpanel_patch_locations_2
     
     except Exception as e:
-        logger.error(f"Error loading patch locations for language {language}: {e}", exc_info=True)
+        logger.error(f"Error loading patch locations for part_number {part_number}: {e}", exc_info=True)
         return [], []
 
 # Define the route for capturing image from the camera
@@ -272,32 +272,32 @@ def process_image():
         # Get the logged-in username from the session
         username = session.get('username', 'Unknown')
 
-        # Get selected language from the request
-        language = request.form['language']
+        # Get selected part_number from the request
+        part_number = request.form['part_number']
         
         # Load the uploaded image
-        taken_image = cv2.imread("static/captured_image.bmp", cv2.IMREAD_COLOR)
-        uploaded_image = cv2.cvtColor(taken_image, cv2.COLOR_BGR2GRAY)
+        captured_image = cv2.imread("static/captured_image.bmp", cv2.IMREAD_COLOR)
+        test_panel_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
 
         # Construct the dynamic path for the reference image
-        reference_image_path = os.path.join('static', 'language_models', language, 'reference_image.bmp')
+        reference_image_path = os.path.join('static', 'panel_folder', part_number, 'reference_image.bmp')
 
         # Check if the reference image exists
         if not os.path.isfile(reference_image_path):
             return jsonify({"status": "error", "message": "Reference image not found."}), 404
         
         # Load the reference image
-        mastered_image = cv2.imread(reference_image_path, cv2.IMREAD_COLOR)
-        reference_image = cv2.cvtColor(mastered_image, cv2.COLOR_BGR2GRAY)
+        reference_image = cv2.imread(reference_image_path, cv2.IMREAD_COLOR)
+        master_image = cv2.cvtColor(reference_image, cv2.COLOR_BGR2GRAY)
 
         # Read the image to be registered
-        image_to_register = uploaded_image
+        image_to_register = test_panel_image
 
         # Initialize SIFT detector
         sift = cv2.SIFT_create()
 
         # Detect keypoints and compute descriptors for both images
-        keypoints_ref, descriptors_ref = sift.detectAndCompute(reference_image, None)
+        keypoints_ref, descriptors_ref = sift.detectAndCompute(master_image, None)
         keypoints_to_register, descriptors_to_register = sift.detectAndCompute(image_to_register, None)
 
         # Use FLANN based matcher for finding matches
@@ -322,10 +322,10 @@ def process_image():
         H, _ = cv2.findHomography(matched_keypoints_to_register, matched_keypoints_ref, cv2.RANSAC, 5.0)
 
         # Warp the image to be registered to align with the reference image
-        registered_image = cv2.warpPerspective(image_to_register, H, (reference_image.shape[1], reference_image.shape[0]))
+        registered_image = cv2.warpPerspective(image_to_register, H, (master_image.shape[1], master_image.shape[0]))
 
         # Perform histogram matching for grayscale images
-        matched = match_histograms(registered_image, reference_image)
+        matched = match_histograms(registered_image, master_image)
 
         # Template Matching
         def extract_patch(image, x, y, width, height):
@@ -333,15 +333,15 @@ def process_image():
             patch = image[y:y+height, x:x+width]
             return patch
 
-        # Load patch locations based on the selected language
-        gray_patch_locations_1, gray_patch_locations_2 = load_patch_locations(language)
+        # Load patch locations based on the selected part_number
+        text_patch_locations_1, blackpanel_patch_locations_2 = load_patch_locations(part_number)
 
         # Initialize lists to store patch matching results
         gray_patch_matches_1 = []
         gray_patch_matches_2 = []
 
-        # Process patches from gray_patch_locations_1
-        for i, (x, y, width, height) in enumerate(gray_patch_locations_1):
+        # Process patches from text_patch_locations_1
+        for i, (x, y, width, height) in enumerate(text_patch_locations_1):
             # Extract the patch from the original image
             master_patch = extract_patch(reference_image, x, y, width, height)
 
@@ -378,8 +378,8 @@ def process_image():
             # Optionally, force garbage collection (though usually not necessary)
             gc.collect()
 
-        # Process patches from gray_patch_locations_2
-        for i, (x, y, width, height) in enumerate(gray_patch_locations_2):
+        # Process patches from blackpanel_patch_locations_2
+        for i, (x, y, width, height) in enumerate(blackpanel_patch_locations_2):
             # Extract the patch from the original image
             master_patch = extract_patch(reference_image, x, y, width, height)
 
@@ -421,16 +421,16 @@ def process_image():
         # Convert the matched image to BGR (color) before drawing rectangles
         result_image = cv2.cvtColor(matched_uint8, cv2.COLOR_GRAY2BGR)
 
-        # Draw rectangles around unmatched patches for gray_patch_locations_1
-        for i, (x, y, width, height) in enumerate(gray_patch_locations_1):
+        # Draw rectangles around unmatched patches for text_patch_locations_1
+        for i, (x, y, width, height) in enumerate(text_patch_locations_1):
             if gray_patch_matches_1[i]:
                 color = (0, 255, 0)  # Green for matched patches
             else:
                 color = (0, 0, 255)  # Red for unmatched patches
             cv2.rectangle(result_image, (x, y), (x + width, y + height), color, 2)
 
-        # Draw rectangles around unmatched patches for gray_patch_locations_2
-        for i, (x, y, width, height) in enumerate(gray_patch_locations_2):
+        # Draw rectangles around unmatched patches for blackpanel_patch_locations_2
+        for i, (x, y, width, height) in enumerate(blackpanel_patch_locations_2):
             if gray_patch_matches_2[i]:
                 color = (0, 255, 0)  # Green for matched patches
             else:
@@ -465,7 +465,7 @@ def process_image():
         img_base64 = base64.b64encode(buffer).decode('utf-8')
 
         # Generate inspection report and save the image to the appropriate folder
-        inspection_report_path = generate_inspection_report(language, status, result_image, username)
+        inspection_report_path = generate_inspection_report(part_number, status, result_image, username)
         
         # Return the status of processing along with the processed image
         return jsonify({'status': status, 'image': img_base64, 'inspection_report': inspection_report_path})
@@ -483,7 +483,7 @@ def add_rectangle():
         sheet_name = request_data['sheetName']
         rect_data = request_data['data']
         
-        folder_path = os.path.join('static', 'language_models', folder_name)
+        folder_path = os.path.join('static', 'panel_folder', folder_name)
         os.makedirs(folder_path, exist_ok=True)
 
         file_path = os.path.join(folder_path, 'location_data.xlsx')
@@ -531,7 +531,7 @@ def save_all():
         formatted_date = local_date_time.strftime("%d-%m-%Y")
         formatted_time = local_date_time.strftime("%I:%M %p")
         
-        folder_path = os.path.join('static', 'language_models', folder_name)
+        folder_path = os.path.join('static', 'panel_folder', folder_name)
         os.makedirs(folder_path, exist_ok=True)
 
         # Save the captured image as reference_image.bmp
